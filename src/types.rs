@@ -1,9 +1,27 @@
 //! C ABI type definitions for the `ImageGlass` v10 native codec plugin interface.
 //!
-//! These types mirror the `ImageGlass.Codec.NativeAbi` C# structs with
-//! `#[repr(C)]` layout for direct FFI.  Every type is `#[repr(C)]` and
-//! derives `Debug + Clone + Copy` — the whole set is plain-old-data from
-//! Rust's perspective.
+//! These types mirror the official `ImageGlass` SDK v1.1.0 `ig_plugin_abi.h`
+//! (the canonical C form of the `ImageGlass.Codec.NativeAbi` C# structs) with
+//! `#[repr(C)]` layout for direct FFI.  Every type is `#[repr(C)]` and derives
+//! `Debug + Clone + Copy` — the whole set is plain-old-data from Rust's
+//! perspective.
+//!
+//! Layout rules from the header:
+//!
+//! - `StructSize` is a contract, not decoration: the ALLOCATING side sets it
+//!   to `std::mem::size_of::<T>()` and the reader must not touch anything
+//!   beyond it.  It is always the first member of a struct that has one, and
+//!   allocations are zero-filled so a forgotten `StructSize` reads as 0 and is
+//!   rejected cleanly.
+//! - Strings are UTF-16 [`IGStringRef`]s: `length` counts code units (not
+//!   bytes) and the slice is not null-terminated.
+//! - Booleans cross as `i32` 0/1; fixed-width integers only.
+//! - Enum values are stable and append-only; treat any unknown value as a
+//!   failure.
+//!
+//! The v1 contract was revised in place when encoding was added — the version
+//! was deliberately NOT bumped, so a plugin built against the earlier contract
+//! is refused per codec by the `IGCodecApi` `StructSize` check.
 
 use libc::c_void;
 
@@ -14,6 +32,8 @@ use ithmb_core::DecodeError;
 // ---------------------------------------------------------------------------
 
 /// Result codes returned by all plugin API functions.
+///
+/// Values are stable and append-only; treat any unknown value as a failure.
 #[repr(i32)]
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum IGStatus {
@@ -26,6 +46,49 @@ pub enum IGStatus {
     Internal = 6,
     NotImplemented = 7,
     IoError = 8,
+    EncodeFailed = 9,
+}
+
+// ---------------------------------------------------------------------------
+// IGPixelFormat / IGColorSpace / IGHdrTransferFn
+//
+// ABI documentation only: the fields that carry these values are declared
+// `i32` in the structs above, exactly as in the header.
+// ---------------------------------------------------------------------------
+
+/// Pixel formats understood by the ABI (values from `ig_plugin_abi.h`).
+#[repr(i32)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum IGPixelFormat {
+    Unknown = 0,
+    Bgra8Unorm = 1,
+    Rgba8Unorm = 2,
+    Rgba16Unorm = 3,
+    RgbaFloat16 = 4,
+}
+
+/// Color spaces understood by the ABI (values from `ig_plugin_abi.h`).
+#[repr(i32)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum IGColorSpace {
+    Unknown = 0,
+    Srgb = 1,
+    LinearSrgb = 2,
+    DisplayP3 = 3,
+    AdobeRgb = 4,
+    Rec2020 = 5,
+    Rec2020Linear = 6,
+}
+
+/// HDR transfer functions understood by the ABI (values from `ig_plugin_abi.h`).
+#[repr(i32)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum IGHdrTransferFn {
+    None = 0,
+    Pq = 1,
+    Hlg = 2,
+    GainMap = 3,
+    Linear = 4,
 }
 
 // ---------------------------------------------------------------------------
@@ -67,6 +130,8 @@ pub struct IGPixelBuffer {
 // ---------------------------------------------------------------------------
 
 /// Metadata describing a decoded image.
+///
+/// Host-allocated; the plugin fills it in place during `load_metadata`.
 #[repr(C)]
 #[derive(Debug, Clone, Copy)]
 pub struct IGImageInfo {
@@ -79,40 +144,82 @@ pub struct IGImageInfo {
     pub orientation: i32,
     pub frame_count: i32,
     pub file_size_bytes: i64,
-    pub icc_profile_data: *mut u8,
+    pub icc_profile_data: *const u8,
     pub icc_profile_size: i32,
 }
 
 // ---------------------------------------------------------------------------
-// IGRect
+// IGAnimationFrameInfo / IGAnimationInfo
 // ---------------------------------------------------------------------------
 
-/// A rectangle used by `IGAnimationInfo`.
+/// Per-frame timing metadata inside [`IGAnimationInfo`].
+///
+/// MUST NEVER GAIN FIELDS: the plugin allocates the frames array and the host
+/// strides it with its own `sizeof`, so any size disagreement misaligns every
+/// element.
 #[repr(C)]
 #[derive(Debug, Clone, Copy)]
-pub struct IGRect {
-    pub x: i32,
-    pub y: i32,
-    pub width: i32,
-    pub height: i32,
+pub struct IGAnimationFrameInfo {
+    pub duration_ms: i32,
+    pub has_alpha: i32,
 }
 
-// ---------------------------------------------------------------------------
-// IGAnimationInfo
-// ---------------------------------------------------------------------------
-
 /// Animation metadata for multi-frame codecs.
+///
+/// `frames` is plugin-owned and released by the host via
+/// `IGCodecApi::free_animation_info`.
 #[repr(C)]
 #[derive(Debug, Clone, Copy)]
 pub struct IGAnimationInfo {
     pub frame_count: i32,
+    pub loop_count: i32, // 0 = infinite
+    pub frames: *mut IGAnimationFrameInfo,
+}
+
+// ---------------------------------------------------------------------------
+// Encode-side structs (host-allocated; signatures only)
+// ---------------------------------------------------------------------------
+
+/// Host-allocated encode options passed to the encode entry points.
+///
+/// This plugin never instantiates this type (encoding is unsupported), but the
+/// ABI function-pointer signatures in [`IGCodecApi`] require it to exist.
+#[repr(C)]
+#[derive(Debug, Clone, Copy)]
+pub struct IGEncodeOptions {
+    pub struct_size: i32, // host sets; do not read past it
+    pub quality: i32,     // 1..100
+    pub lossless: i32,
+    pub preserve_alpha: i32,
+    pub source_file_path: IGStringRef,
+    pub icc_profile_data: *const u8,
+    pub icc_profile_size: i32,
+}
+
+/// Host-allocated multi-frame encode session description.
+///
+/// Signatures only — never instantiated by this plugin.
+#[repr(C)]
+#[derive(Debug, Clone, Copy)]
+pub struct IGMultiFrameEncodeInfo {
+    pub struct_size: i32, // host sets; do not read past it
+    pub frame_count: i32,
+    pub is_animated: i32,
     pub loop_count: i32,
     pub canvas_width: i32,
     pub canvas_height: i32,
-    pub background_color: i32,
-    pub duration_100ns: *mut i64,
-    pub disposal: *mut i32,
-    pub frame_areas: *mut IGRect,
+}
+
+/// Host-allocated per-frame encode metadata.
+///
+/// Signatures only — never instantiated by this plugin.
+#[repr(C)]
+#[derive(Debug, Clone, Copy)]
+pub struct IGEncodeFrameInfo {
+    pub struct_size: i32, // host sets; do not read past it
+    pub frame_index: i32,
+    pub duration_ms: i32,
+    pub has_alpha: i32,
 }
 
 // ---------------------------------------------------------------------------
@@ -120,19 +227,30 @@ pub struct IGAnimationInfo {
 // ---------------------------------------------------------------------------
 
 /// Static metadata describing a codec's capabilities.
+///
+/// PLUGIN-allocated and returned by pointer from `GetCapability`.  Allocated
+/// once for the lifetime of the plugin, never per call — the host cannot tell
+/// the plugin how large its buffer would be beforehand, so it never fills a
+/// host buffer.
 #[repr(C)]
 #[derive(Debug, Clone, Copy)]
 pub struct IGCodecCapability {
+    pub struct_size: i32, // = sizeof(IGCodecCapability); must be first
     pub codec_id: IGStringRef,
-    pub name: IGStringRef,
+    pub codec_name: IGStringRef,
     pub metadata_priority: i32,
     pub decode_priority: i32,
     pub supports_metadata: i32,
-    pub supports_static_raster: i32,
     pub supports_color_profiles: i32,
-    pub supports_animation: i32,
-    pub extension_count: i32,
-    pub extensions: *const IGStringRef,
+    pub supports_static_raster_decoding: i32,
+    pub supports_animation_decoding: i32,
+    pub decode_extension_count: i32,
+    pub decode_extensions: *const IGStringRef, // lowercase, leading dot; plugin lifetime
+    pub supports_static_raster_encoding: i32,
+    pub supports_multi_frame_encoding: i32,
+    pub encode_priority: i32,
+    pub encode_extension_count: i32,
+    pub encode_extensions: *const IGStringRef,
 }
 
 // ---------------------------------------------------------------------------
@@ -151,7 +269,7 @@ pub struct IGPluginInfo {
 }
 
 // ---------------------------------------------------------------------------
-// IGHostCoreApi
+// IGHostCoreApi / IGHostApi
 // ---------------------------------------------------------------------------
 
 /// Core host service functions provided by `ImageGlass`.
@@ -162,14 +280,12 @@ pub struct IGHostCoreApi {
     pub alloc: Option<unsafe extern "C" fn(usize) -> *mut c_void>,
     pub free: Option<unsafe extern "C" fn(*mut c_void)>,
     pub is_cancellation_requested: Option<unsafe extern "C" fn(*mut c_void) -> i32>,
-    pub get_config_directory: Option<unsafe extern "C" fn(*mut u16, i32)>,
+    pub get_config_directory: Option<unsafe extern "C" fn(*mut u16, i32) -> i32>,
 }
 
-// ---------------------------------------------------------------------------
-// IGHostApi
-// ---------------------------------------------------------------------------
-
 /// Top-level host API provided by `ImageGlass`.
+///
+/// Host-allocated; valid for the plugin's lifetime.
 #[repr(C)]
 #[derive(Debug, Clone, Copy)]
 pub struct IGHostApi {
@@ -185,28 +301,36 @@ pub struct IGHostApi {
 /// Function table for a single codec.
 ///
 /// Every codec exposed by a plugin provides one of these tables.  Animation
-/// function pointers are included but set to `None` for static-only codecs.
+/// and encode function pointers are included but set to `None` for
+/// static-raster-decode-only codecs.
 ///
-/// # Layout (C# ABI, 9 × 8 = 72 bytes)
+/// `struct_size` must be first and must be set: the plugin owns this
+/// allocation and the host reads members by offset, so it is the only offset
+/// guaranteed stable across future additions.
+///
+/// # Layout (112 bytes on 64-bit)
 ///
 /// | Offset | Field | Type |
 /// |---|---|---|
-/// | 0 | `get_capability` | `fn(*mut IGCodecCapability) -> IGStatus` |
-/// | 8 | `can_handle_extension` | `fn(IGStringRef) -> i32` |
-/// | 16 | `can_handle_signature` | `fn(*const u8, i32) -> i32` |
-/// | 24 | `load_metadata` | `fn(IGStringRef, *mut IGImageInfo, *mut c_void) -> IGStatus` |
-/// | 32 | `decode_static_raster` | `fn(IGStringRef, i32, *mut IGPixelBuffer, *mut c_void) -> IGStatus` |
-/// | 40 | `free_pixel_buffer` | `fn(*mut IGPixelBuffer)` |
-/// | 48 | `get_animation_info` | `fn(IGStringRef, *mut IGAnimationInfo, *mut c_void) -> IGStatus` |
-/// | 56 | `free_animation_info` | `fn(*mut IGAnimationInfo)` |
-/// | 64 | `decode_animation_frame` | `fn(IGStringRef, i32, *mut IGPixelBuffer, *mut c_void) -> IGStatus` |
-///
-/// Note: unlike `IGPluginApi`, there is no `struct_size` or `abi_version` field
-/// at the start — the C# `IGCodecApi` struct is pure function pointers only.
+/// | 0 | `struct_size` | `i32` |
+/// | 8 | `get_capability` | `fn(*mut *mut IGCodecCapability) -> IGStatus` |
+/// | 16 | `can_handle_extension` | `fn(IGStringRef) -> i32` |
+/// | 24 | `can_handle_signature` | `fn(*const u8, i32) -> i32` |
+/// | 32 | `load_metadata` | `fn(IGStringRef, *mut IGImageInfo, *mut c_void) -> IGStatus` |
+/// | 40 | `decode_static_raster` | `fn(IGStringRef, i32, *mut IGPixelBuffer, *mut c_void) -> IGStatus` |
+/// | 48 | `free_pixel_buffer` | `fn(*mut IGPixelBuffer)` |
+/// | 56 | `get_animation_info` | `fn(IGStringRef, *mut IGAnimationInfo, *mut c_void) -> IGStatus` |
+/// | 64 | `free_animation_info` | `fn(*mut IGAnimationInfo)` |
+/// | 72 | `decode_animation_frame` | `fn(IGStringRef, i32, *mut IGPixelBuffer, *mut c_void) -> IGStatus` |
+/// | 80 | `encode_static_raster` | `fn(IGStringRef, *const IGPixelBuffer, *const IGEncodeOptions, *mut c_void) -> IGStatus` |
+/// | 88 | `begin_encode_multi_frame` | `fn(IGStringRef, *const IGMultiFrameEncodeInfo, *const IGEncodeOptions, *mut *mut c_void, *mut c_void) -> IGStatus` |
+/// | 96 | `encode_frame` | `fn(*mut c_void, *const IGPixelBuffer, *const IGEncodeFrameInfo, *mut c_void) -> IGStatus` |
+/// | 104 | `end_encode_multi_frame` | `fn(*mut c_void, i32, *mut c_void) -> IGStatus` |
 #[repr(C)]
 #[derive(Debug, Clone, Copy)]
 pub struct IGCodecApi {
-    pub get_capability: Option<unsafe extern "C" fn(*mut IGCodecCapability) -> IGStatus>,
+    pub struct_size: i32, // = sizeof(IGCodecApi); must be first
+    pub get_capability: Option<unsafe extern "C" fn(*mut *mut IGCodecCapability) -> IGStatus>,
     pub can_handle_extension: Option<unsafe extern "C" fn(IGStringRef) -> i32>,
     pub can_handle_signature: Option<unsafe extern "C" fn(*const u8, i32) -> i32>,
     pub load_metadata:
@@ -219,6 +343,33 @@ pub struct IGCodecApi {
     pub free_animation_info: Option<unsafe extern "C" fn(*mut IGAnimationInfo)>,
     pub decode_animation_frame:
         Option<unsafe extern "C" fn(IGStringRef, i32, *mut IGPixelBuffer, *mut c_void) -> IGStatus>,
+    pub encode_static_raster: Option<
+        unsafe extern "C" fn(
+            IGStringRef,
+            *const IGPixelBuffer,
+            *const IGEncodeOptions,
+            *mut c_void,
+        ) -> IGStatus,
+    >,
+    pub begin_encode_multi_frame: Option<
+        unsafe extern "C" fn(
+            IGStringRef,
+            *const IGMultiFrameEncodeInfo,
+            *const IGEncodeOptions,
+            *mut *mut c_void,
+            *mut c_void,
+        ) -> IGStatus,
+    >,
+    pub encode_frame: Option<
+        unsafe extern "C" fn(
+            *mut c_void,
+            *const IGPixelBuffer,
+            *const IGEncodeFrameInfo,
+            *mut c_void,
+        ) -> IGStatus,
+    >,
+    pub end_encode_multi_frame:
+        Option<unsafe extern "C" fn(*mut c_void, i32, *mut c_void) -> IGStatus>,
 }
 
 // ---------------------------------------------------------------------------
@@ -227,7 +378,7 @@ pub struct IGCodecApi {
 
 /// Function table for the plugin itself.
 ///
-/// # Layout (C# ABI, 96 bytes)
+/// # Layout (96 bytes)
 ///
 /// | Offset | Field | Type |
 /// |---|---|---|

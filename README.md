@@ -42,18 +42,22 @@ Output: `dist/ithmb-codec-<platform>.igplugin.zip` (binary + manifest).
 
 | Path | Purpose |
 |------|---------|
-| `src/` | Rust cdylib (721 lines, ImageGlass native plugin ABI) |
+| `src/` | Rust cdylib, ImageGlass native plugin ABI (SDK v1.1.0) |
 | `igplugin.json` | Plugin manifest (id, name, executable, kind) |
 | `scripts/package.sh` | Build + package into `.igplugin.zip` |
 | `.github/workflows/ci.yml` | CI: build + clippy + deny + package artifacts |
 
 ## FFI from Other Languages
 
-The library exposes a single C entry point:
+The library exposes a single C entry point (SDK v1.1.0 two-argument form):
 
 ```c
-const IGPluginApi* ig_plugin_get_api(i32 abi_version);
+const IGPluginApi* ig_plugin_get_api(int32_t host_abi_version, const IGHostApi* host_api);
 ```
+
+The plugin implements the ImageGlass SDK v1.1.0 codec contract (decode-only;
+`IGCodecApi`/`IGCodecCapability` are StructSize-validated and the encode
+function pointers are null). Requires ImageGlass build **10.0.3.805+**.
 
 See the [ImageGlass plugin SDK](https://github.com/ImageGlass/SDK) for details.
 

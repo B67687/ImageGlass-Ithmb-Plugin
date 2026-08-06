@@ -20,13 +20,43 @@ ithmb-core (Rust library, loaded as shared lib)
 ## Key Facts
 
 - **Language**: Rust (cdylib)
-- **ABI**: ImageGlass v10 native codec plugin (v1.0.0.0)
+- **ABI**: ImageGlass v10 native codec plugin (SDK v1.1.0)
 - **Platforms**: Linux, macOS, Windows (CI builds all 3)
 - **Memory rule**: Plugin allocates pixel buffers via its own allocator (`libc::malloc`), not the host allocator. Whoever allocates, frees.
 - **Buffer tracking**: `BufferRegistry` in `buffer_registry.rs` tracks live pixel buffers to prevent double-free and use-after-free.
 - **Build**: `cargo build --release`, then `./scripts/package.sh [linux|macos|windows]` produces `.igplugin.zip`
 - **CI**: GitHub Actions builds + clippy + deny for all 3 platforms on every push, automatically creates releases on `v*` tags
 - **Dependency**: [`ithmb-core`](https://github.com/B67687/Ithmb-Codec)
+
+## Why `unsafe_code = "allow"`
+
+`Cargo.toml` sets `[lints.rust] unsafe_code = "allow"` — deliberately. This
+crate is a C ABI cdylib whose entire surface is `extern "C"` entry points;
+every exported function is `unsafe` by contract because the host (ImageGlass)
+calls across the FFI boundary with raw pointers it owns. The `unsafe` blocks
+inside are the bridge, and each carries a `// SAFETY:` comment stating the
+invariants it relies on (null checks, struct layout, ownership). Denying the
+lint would flag the ABI surface itself — the point of the crate. The other
+lints stay strict: `unused_crate_dependencies` and clippy `all` + `pedantic`
+are deny.
+
+## SDK v1.1.0 Contract
+
+The plugin implements the ImageGlass SDK v1.1.0 codec contract:
+
+- **Decode-only** — `IGCodecApi` exposes decode; the encode function pointers
+  are null. Encoding is deliberately deferred: it would require an ithmb
+  *encoder* in `ithmb-core`, which does not exist yet (the upstream crate
+  decodes raw formats and synthesizes samples; it has no production encoder).
+- **StructSize-validated** — `IGCodecApi` and `IGCodecCapability` carry
+  `StructSize` as the first field; the plugin validates it on entry before
+  touching any other field, so a host/plugin SDK version mismatch fails safely
+  instead of reading garbage.
+- **Two-argument entry** — `ig_plugin_get_api(int32_t host_abi_version, const
+  IGHostApi* host_api)` (the one-argument form is the pre-1.1.0 ABI).
+- **Entry-point safety** — every FFI entry runs inside `catch_unwind` so a Rust
+  panic cannot unwind across the C boundary.
+  contract).
 
 ## Plugin Files
 

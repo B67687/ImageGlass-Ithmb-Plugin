@@ -12,7 +12,7 @@
 //! means the host-provided API table is valid for the entire lifetime of
 //! the plugin.
 
-use crate::types::{ig_string_ref_from_str, IGHostCoreApi};
+use crate::types::{IGHostCoreApi, ig_string_ref_from_str};
 
 // ---------------------------------------------------------------------------
 // LogLevel
