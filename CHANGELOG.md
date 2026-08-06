@@ -1,5 +1,40 @@
 # Changelog
 
+## v1.1.0 (2026-08-06) — SDK v1.1.0 ABI port & hardening
+
+### Changed
+- **SDK v1.1.0 ABI port (decode-only)**: `IGCodecApi` is now StructSize-first
+  (112-byte table, 13 function pointers incl. 4 encode pointers, all null).
+  GetCapability now returns a plugin-allocated `IGCodecCapability` by pointer.
+- **IGCodecCapability**: rewritten StructSize-first to the exact v1.1.0 field
+  order (decode flags, extension count/pointers, encode flags, null encode
+  extensions).
+- **IGAnimationInfo**: corrected to `{frame_count, loop_count, frames}` with
+  the new `IGAnimationFrameInfo` element type.
+- **IGStatus**: added `EncodeFailed = 9`.
+- **IGImageInfo.IccProfileData**: now `*const u8` per the official header.
+- Version bumped to 1.1.0 (Cargo.toml, igplugin.json, lib.rs).
+
+### Security
+- File reads pre-checked via `fs::metadata` before `fs::read` (reject >8 MiB
+  with `DecodeFailed` before allocating).
+- `stride`/`buf_size` computed with checked arithmetic (`OutOfMemory` on
+  overflow).
+- `can_handle_extension` fully wrapped in `catch_unwind` (host logging inside
+  the guarded region).
+- Cargo.lock committed + `rust-toolchain.toml` (1.88.0) for reproducible builds.
+- CI actions SHA-pinned; dependabot removed.
+
+### Structure
+- `lib.rs` split into `codec.rs`, `decode.rs`, `state.rs`, `strings.rs`
+  (all modules under the 250-LOC non-test ceiling).
+- 16 new tests: ABI contract, entry-point validation, decode paths, and a
+  deterministic pseudo-fuzz harness (mutated inputs never panic the decoder).
+
+### Notes
+- Requires ImageGlass build 10.0.3.805+ (host validates `IGCodecApi.StructSize`).
+
+
 ## v1.0.0 (2026-07-13) — Fixed plugin manifest & ABI
 
 ### Fixed

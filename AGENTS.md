@@ -14,7 +14,8 @@ ImageGlass (cross-platform Avalonia UI)
 ImageGlass-Ithmb-Plugin (C ABI cdylib)
     ↓ FFI
 ithmb-core (Rust library, loaded as shared lib)
-    ↔ 7 encoders, 8 decoders, 54 profiles, PhotoDB
+    ithmb-core (Rust library, loaded as shared lib, decode-only)
+    ↔ 8 decoders, 54 profiles, PhotoDB (no encoder)
 ```
 
 ## Key Facts
@@ -56,13 +57,16 @@ The plugin implements the ImageGlass SDK v1.1.0 codec contract:
   IGHostApi* host_api)` (the one-argument form is the pre-1.1.0 ABI).
 - **Entry-point safety** — every FFI entry runs inside `catch_unwind` so a Rust
   panic cannot unwind across the C boundary.
-  contract).
 
 ## Plugin Files
 
 | Path | Purpose |
 |------|---------|
-| `src/lib.rs` | C ABI entry point, codec API, metadata loading, decode dispatch |
+| `src/lib.rs` | C ABI entry point, plugin lifecycle, API table construction |
+| `src/codec.rs` | Codec capability, extension matching, metadata loading |
+| `src/decode.rs` | Static-raster decode, pixel-buffer free, buffer registry access |
+| `src/state.rs` | Plugin state, statics (OnceLocks), initialization |
+| `src/strings.rs` | UTF-16 conversion helpers |
 | `src/allocator.rs` | `pixel_buffer_alloc`/`pixel_buffer_free` wrappers (own allocator, not host) |
 | `src/buffer_registry.rs` | Thread-safe HashMap tracking live pixel allocations |
 | `src/types.rs` | `#[repr(C)]` ABI type definitions mirroring ImageGlass C# SDK structs |
