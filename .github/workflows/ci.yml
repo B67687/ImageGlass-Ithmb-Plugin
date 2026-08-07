@@ -37,7 +37,10 @@ jobs:
             if [ -e "$cand" ]; then LIB="$cand"; break; fi
           done
           if [ -n "$LIB" ]; then
-            if nm -D "$LIB" 2>/dev/null | grep -q ig_plugin_get_api; then
+            # ELF (Linux) exports live in .dynsym (nm -D); Mach-O (macOS)
+            # exports live in the dyld export trie (nm -gU). Accept either.
+            if nm -D "$LIB" 2>/dev/null | grep -q ig_plugin_get_api \
+               || nm -gU "$LIB" 2>/dev/null | grep -q ig_plugin_get_api; then
               echo "Symbol verified"
             else
               echo "Missing symbol!"
