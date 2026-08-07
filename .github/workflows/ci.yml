@@ -32,9 +32,20 @@ jobs:
         shell: bash
         if: runner.os != 'Windows'
         run: |
-          LIB="$(ls target/release/libithmb_core_cabi.so target/release/libithmb_core_cabi.dylib 2>/dev/null | head -n 1)"
+          LIB=""
+          for cand in target/release/libithmb_core_cabi.so target/release/libithmb_core_cabi.dylib; do
+            if [ -e "$cand" ]; then LIB="$cand"; break; fi
+          done
           if [ -n "$LIB" ]; then
-            nm -D "$LIB" 2>/dev/null | grep -q ig_plugin_get_api && echo "Symbol verified" || echo "Missing symbol!"
+            if nm -D "$LIB" 2>/dev/null | grep -q ig_plugin_get_api; then
+              echo "Symbol verified"
+            else
+              echo "Missing symbol!"
+              exit 1
+            fi
+          else
+            echo "No cdylib artifact found"
+            exit 1
           fi
       - name: Package .igplugin.zip
         id: package
