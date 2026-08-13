@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 96 96">
+  <!-- new-07: graphite-grey puzzle piece with a white sun + two-peak mountain scene; the sun+triangles are ONE composition, translated as a whole so the group's center lands on the puzzle center (48,48) — original relative positions preserved, no play. Size fix 2026-08-12: scaled uniformly by 1.2 from canvas center; body 60x64 -> 72x76.8 (62.5% -> 75% canvas fill). Recolor 2026-08-13: #007AFF -> #6E6E73 graphite (neutral tool grey, white glyph). Enlarge 2026-08-13: scaled 1.1x about body bottom-center pivot (45.6,94); body 72x76.8 -> 79.2x84.48 (82.5% canvas fill), bottom pinned at y=94 to stay close to the title. All bounds verified in [0,96]. -->
+  <defs>
+    <mask id="n07">
+      <rect width="96" height="96" fill="white"/>
+      <circle cx="6.0" cy="51.76" r="10.56" fill="black"/>
+    </mask>
+  </defs>
+  <rect x="6.0" y="9.52" width="79.2" height="84.48" rx="13.2" fill="#6E6E73" mask="url(#n07)"/>
+
+  <circle cx="85.2" cy="51.76" r="10.56" fill="#6E6E73"/>
+  <g>
+    <circle cx="56.16" cy="36.47" r="3.96" fill="#fff"/>
+    <polygon points="21.84,65.51 40.32,41.75 58.8,65.51" fill="#fff"/>
+    <polygon points="45.6,65.51 61.44,49.8 74.64,65.51" fill="#fff"/>
+  </g>
+</svg>

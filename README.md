@@ -1,5 +1,7 @@
 <div align="center">
 
+<img src="docs/logo.svg?v=2" width="96" height="96">
+
 # ImageGlass Ithmb Plugin
 
 <a href="./docs/CREDITS.md"><img src="https://cdn.jsdelivr.net/gh/B67687/ImageGlass-Ithmb-Plugin@main/docs/badges/deepseek.svg" alt="DeepSeek"></a>
