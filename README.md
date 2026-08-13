@@ -4,11 +4,24 @@
 
 # ImageGlass Ithmb Plugin
 
+<a href="LICENSE"><img src="https://cdn.jsdelivr.net/gh/B67687/ImageGlass-Ithmb-Plugin@main/docs/badges/license.svg" alt="License: MIT"></a>
+<a href="https://rust-lang.org"><img src="https://cdn.jsdelivr.net/gh/B67687/ImageGlass-Ithmb-Plugin@main/docs/badges/rust.svg" alt="Rust 1.88+"></a>
+
+<p align="center"><a href="https://cdn.jsdelivr.net/gh/B67687/ImageGlass-Ithmb-Plugin@main/docs/decoded-example.png"><img src="https://cdn.jsdelivr.net/gh/B67687/ImageGlass-Ithmb-Plugin@main/docs/decoded-example.png" alt="Decoded .ithmb sample (720×480 YCbCr 4:2:0)" width="480"></a><br>
+720×480 YCbCr 4:2:0, decoded by ithmb-core v1.9.6.</p>
+
+<hr style="height:1px;background:var(--color-border-muted);border:none;">
+
+<sub>Built with AI assistance — see <a href="./docs/CREDITS.md">CREDITS.md</a></sub>
+<br>
 <a href="./docs/CREDITS.md"><img src="https://cdn.jsdelivr.net/gh/B67687/ImageGlass-Ithmb-Plugin@main/docs/badges/deepseek.svg" alt="DeepSeek"></a>
 <a href="./docs/CREDITS.md"><img src="https://cdn.jsdelivr.net/gh/B67687/ImageGlass-Ithmb-Plugin@main/docs/badges/opencode.svg" alt="OpenCode"></a>
 <a href="./docs/CREDITS.md"><img src="https://cdn.jsdelivr.net/gh/B67687/ImageGlass-Ithmb-Plugin@main/docs/badges/omo.svg" alt="Oh My OpenAgent"></a>
 
+<br>
+
 </div>
+<br>
 
 C ABI plugin for [ImageGlass](https://imageglass.org) v10 to decode `.ithmb` thumbnail files using [ithmb-core](https://crates.io/crates/ithmb-core) from the parent repo [Ithmb-Codec](https://github.com/B67687/Ithmb-Codec)
 
