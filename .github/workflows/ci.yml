@@ -89,6 +89,22 @@ jobs:
       - name: cargo deny check
         uses: EmbarkStudios/cargo-deny-action@3c6349835b2b7b196a839186cb8b78e02f7b5f25 # v2.1.1
 
+  secrets:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+      - name: Gitleaks (secrets in history)
+        run: |
+          # The gitleaks-action computes a commit range (<first>^..<last>) that
+          # breaks on root-commit histories (no parent). Scan all commits
+          # directly instead.
+          curl -sSfL "https://github.com/gitleaks/gitleaks/releases/download/v8.24.3/gitleaks_8.24.3_linux_x64.tar.gz" -o /tmp/gitleaks.tar.gz
+          tar -xzf /tmp/gitleaks.tar.gz -C /tmp gitleaks
+          /tmp/gitleaks git --no-banner --log-opts="--no-merges --all"
+
   release:
     needs: [build]
     if: startsWith(github.ref, 'refs/tags/v')
