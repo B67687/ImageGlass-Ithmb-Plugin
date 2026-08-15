@@ -35,9 +35,9 @@ checksum = "9e5e8f6c15a24b9a3ee5efec809ccd006d3b30e8b3bb63c39af737c7f87daa1d"
 
 [[package]]
 name = "ithmb-core"
-version = "1.9.5"
+version = "1.9.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9a1dde88685257eae443a6a61ea3dbbfdcaa62b1e1d4607cdf5f93dac900a2d3"
+checksum = "a6dd3a77dfd75d04a87d729d50e9db501cc9168ab7c91f1dda33bea397d70fac"
 dependencies = [
  "jpeg-decoder",
  "thiserror",
@@ -45,7 +45,7 @@ dependencies = [
 
 [[package]]
 name = "ithmb-core-cabi"
-version = "1.1.0"
+version = "1.1.1"
 dependencies = [
  "ithmb-core",
  "libc",

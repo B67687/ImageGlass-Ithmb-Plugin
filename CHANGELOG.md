@@ -1,5 +1,16 @@
 # Changelog
 
+## v1.1.1 (2026-08-14) — Update ithmb-core to 1.9.6
+
+### Changed
+- **ithmb-core 1.9.5 → 1.9.6**: ships the Nano 7G cover-art alternates fix,
+  reordered-RGB555 endianness fix, `swaps_dimensions` encoder fix, and profile
+  1044 disablement (53 active profiles) from the upstream codec release.
+- Version bumped to 1.1.1 (Cargo.toml, igplugin.json, state.rs).
+
+### Notes
+- Cargo.lock regenerated against the crates.io index (pins ithmb-core 1.9.6).
+
 ## v1.1.0 (2026-08-06) — SDK v1.1.0 ABI port & hardening
 
 ### Changed
