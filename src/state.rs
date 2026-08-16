@@ -145,7 +145,7 @@ pub(crate) fn ensure_initialized() {
     let _ = PLUGIN_STATE.get_or_init(|| {
         let plugin_id = encode_utf16("ithmb-codec");
         let plugin_name = encode_utf16("iThmb Codec");
-        let plugin_version = encode_utf16("1.1.1");
+        let plugin_version = encode_utf16("1.1.3");
         let cap_name = encode_utf16("iThmb Codec");
 
         let codec_api = IGCodecApi {
