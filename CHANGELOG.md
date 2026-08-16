@@ -1,7 +1,5 @@
 # Changelog
 
-# Changelog
-
 ## v1.1.3 (2026-08-16) — Update ithmb-core to 1.9.9
 
 ### Changed
@@ -59,6 +57,8 @@
 
 ## v1.0.0 (2026-07-13) — Fixed plugin manifest & ABI
 
+Initial ImageGlass v10 native codec plugin for decoding Apple `.ithmb` thumbnail files.
+
 ### Fixed
 - **igplugin.json**: Set correct executable name (was `unset`, now per-platform so ImageGlass can load the native codec)
 - **Critical ABI fix**: Rewrote FFI layer to match C# SDK struct layouts exactly
@@ -74,7 +74,6 @@
   SupportsColorProfiles=0, SupportsAnimation=0
 - Fixed codec priority to 200 (was 0, losing selection to Magick.NET)
 - Removed broken magic signature check (ithmb has no header magic)
-Initial ImageGlass v10 native codec plugin for decoding Apple `.ithmb` thumbnail files.
 
 ### Features
 - Decodes `.ithmb` and `.ipm` files natively in ImageGlass v10
