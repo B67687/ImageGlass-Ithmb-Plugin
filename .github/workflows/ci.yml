@@ -50,6 +50,53 @@ jobs:
             echo "No cdylib artifact found"
             exit 1
           fi
+      - name: Verify symbol export (Windows PE export table)
+        shell: pwsh
+        if: runner.os == 'Windows'
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $dll = Get-ChildItem 'target/release' -Filter '*.dll' | Select-Object -First 1
+          if (-not $dll) { Write-Error 'No DLL found in target/release'; exit 1 }
+          $bytes = [System.IO.File]::ReadAllBytes($dll.FullName)
+          $peOffset = [BitConverter]::ToInt32($bytes, 0x3C)
+          if ($bytes[$peOffset] -ne 0x50 -or $bytes[$peOffset + 1] -ne 0x45) { Write-Error 'Invalid PE signature' }
+          $optOffset = $peOffset + 24
+          $magic = [BitConverter]::ToUInt16($bytes, $optOffset)
+          $pe32plus = ($magic -eq 0x20B)
+          $numSections = [BitConverter]::ToUInt16($bytes, $peOffset + 6)
+          $optSize = [BitConverter]::ToUInt16($bytes, $peOffset + 20)
+          # Data directory 0 = export table (PE32+ at optOffset+112, PE32 at optOffset+96)
+          $ddExportOffset = $optOffset + $(if ($pe32plus) { 112 } else { 96 })
+          $exportRva = [BitConverter]::ToInt32($bytes, $ddExportOffset)
+          if ($exportRva -eq 0) { Write-Error 'No export directory (no exports?)' }
+          $sectionsOffset = $optOffset + $optSize
+          function RvaToOffset([int]$rva) {
+            for ($i = 0; $i -lt $numSections; $i++) {
+              $s = $sectionsOffset + ($i * 40)
+              $va = [BitConverter]::ToInt32($bytes, $s + 12)
+              $vsize = [BitConverter]::ToInt32($bytes, $s + 8)
+              $rawPtr = [BitConverter]::ToInt32($bytes, $s + 20)
+              if ($rva -ge $va -and $rva -lt ($va + $vsize)) { return $rawPtr + ($rva - $va) }
+            }
+            return -1
+          }
+          $exportFileOffset = RvaToOffset $exportRva
+          if ($exportFileOffset -lt 0) { Write-Error 'Export directory not found in any section' }
+          $numNames = [BitConverter]::ToInt32($bytes, $exportFileOffset + 24)
+          $namesOffset = RvaToOffset ([BitConverter]::ToInt32($bytes, $exportFileOffset + 32))
+          if ($namesOffset -lt 0) { Write-Error 'Export names table not found' }
+          $found = $false
+          for ($i = 0; $i -lt $numNames; $i++) {
+            $nameRva = [BitConverter]::ToInt32($bytes, $namesOffset + ($i * 4))
+            $nameOffset = RvaToOffset $nameRva
+            if ($nameOffset -lt 0) { continue }
+            $sb = New-Object System.Text.StringBuilder
+            $j = $nameOffset
+            while ($bytes[$j] -ne 0) { [void]$sb.Append([char]$bytes[$j]); $j++ }
+            if ($sb.ToString() -eq 'ig_plugin_get_api') { $found = $true; break }
+          }
+          if (-not $found) { Write-Error 'Export ig_plugin_get_api NOT FOUND in PE export table'; exit 1 }
+          Write-Host "Symbol verified: ig_plugin_get_api (PE export table, $($dll.Name))"
       - name: ABI smoke test (ctypes, no GUI)
         if: runner.os == 'Linux'
         run: python3 scripts/abi-smoke.py tests/fixtures/test1.ithmb
@@ -76,18 +123,23 @@ jobs:
           cache-key: "plugin-clippy"
       - name: cargo clippy
         run: cargo clippy --all-features --all-targets -- -D warnings
+      - name: cargo test
+        run: cargo test
 
   verify_deny:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-      - uses: actions-rust-lang/setup-rust-toolchain@166cdcfd11aee3cb47222f9ddb555ce30ddb9659 # v1.17.0
-        with:
-          cache: true
-          cache-key: "plugin-deny"
       - name: cargo deny check
-        uses: EmbarkStudios/cargo-deny-action@3c6349835b2b7b196a839186cb8b78e02f7b5f25 # v2.1.1
+        shell: bash
+        run: |
+          # Pinned prebuilt musl binary instead of the Docker action — the action
+          # reinstalls the toolchain + advisory DB into a fresh container on every
+          # run. Direct download is byte-identical and ~30-60s faster.
+          curl -sSfL https://github.com/EmbarkStudios/cargo-deny/releases/download/0.20.2/cargo-deny-0.20.2-x86_64-unknown-linux-musl.tar.gz -o /tmp/cargo-deny.tar.gz
+          tar -xzf /tmp/cargo-deny.tar.gz -C /tmp --strip-components=1
+          /tmp/cargo-deny --log-level warn --manifest-path ./Cargo.toml --all-features check
 
   secrets:
     runs-on: ubuntu-latest

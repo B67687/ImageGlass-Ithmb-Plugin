@@ -25,3 +25,9 @@ unused_crate_dependencies = "deny"
 [lints.clippy]
 all = "deny"
 pedantic = "deny"
+
+# CI/dev profile — keep line tables so backtraces still resolve file:line, but
+# strip full DWARF from dependencies (never debugged inside ithmb-core/zune-jpeg).
+# See docs/adr/0001-ci-optimization.md.
+[profile.dev.package."*"]
+debug = "line-tables-only"
