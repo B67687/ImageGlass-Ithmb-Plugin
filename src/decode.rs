@@ -7,8 +7,8 @@
 //! prevent double-free / dangling-pointer bugs.
 
 use std::panic::catch_unwind;
-use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::Arc;
 
 use libc::c_void;
 
@@ -19,8 +19,8 @@ use crate::buffer_registry::BufferRegistry;
 use crate::logging::Logger;
 use crate::state::BUFFER_REGISTRY;
 use crate::strings::utf16_to_string;
-use crate::types::{IGPixelBuffer, IGStatus, IGStringRef, ig_status_from_decode_error};
-use crate::{MAX_FILE_SIZE_BYTES, get_host_api};
+use crate::types::{ig_status_from_decode_error, IGPixelBuffer, IGStatus, IGStringRef};
+use crate::{get_host_api, MAX_FILE_SIZE_BYTES};
 
 /// Returns the global [`BufferRegistry`] instance.
 fn get_buffer_registry() -> &'static BufferRegistry {
@@ -321,11 +321,9 @@ mod tests {
         unsafe { codec_free_pixel_buffer(std::ptr::from_mut(&mut buffer)) };
         assert!(buffer.data.is_null());
         assert_eq!(buffer.width, 0);
-        assert!(
-            crate::state::BUFFER_REGISTRY
-                .get()
-                .is_none_or(BufferRegistry::is_empty)
-        );
+        assert!(crate::state::BUFFER_REGISTRY
+            .get()
+            .is_none_or(BufferRegistry::is_empty));
         std::fs::remove_file(&path).ok();
     }
 }
@@ -380,9 +378,9 @@ mod fuzz {
     }
 
     /// Seed vectors: minimal valid-ish .ithmb headers (real 4-byte prefixes
-    /// from the ithmb-core profile DB) plus degenerate inputs.  Real fixture
-    /// files are not available offline, so prefixes + deterministic padding
-    /// are the starting material.
+    /// from the ithmb-core profile DB) plus degenerate inputs. A real fixture
+    /// exists at tests/fixtures/test1.ithmb, but these synthetic seeds provide
+    /// deterministic coverage of edge cases.
     fn seed_vectors() -> Vec<Vec<u8>> {
         // Prefix 1024 = 0x0000_0400 (320×240 RGB565), 1019 = 0x0000_03FB
         // (720×480 YUV422), 1093 = 0x0000_0445 (512×512 RGB565).
