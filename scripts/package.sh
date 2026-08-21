@@ -42,6 +42,9 @@ ARCHIVE_NAME="ithmb-codec-${PKG_TAG}.igplugin.zip"
 echo "Building for $TARGET..."
 cargo build --release
 
+# Extract version from Cargo.toml (single source of truth)
+VERSION=$(grep '^version' "$REPO_ROOT/Cargo.toml" | head -1 | sed 's/.*"\(.*\)"/\1/')
+
 echo "Packaging $ARCHIVE_NAME..."
 mkdir -p "$DIST_DIR"
 
@@ -55,7 +58,7 @@ cat > "$PKG_DIR/igplugin.json" << IGMANIFEST
   "id": "Plugin_IthmbCodec",
   "name": "iThmb Codec",
   "description": "Native codec plugin that decodes Apple .ithmb thumbnail files (iPod/iPhone thumbnail databases) into viewable images in ImageGlass v10.",
-  "version": "1.1.3",
+  "version": "${VERSION}",
   "author": "Nacai",
   "website": "https://github.com/B67687/ImageGlass-Ithmb-Plugin",
   "kind": "Codec",
