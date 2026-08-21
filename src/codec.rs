@@ -13,7 +13,7 @@ use crate::logging::Logger;
 use crate::state::{CAPABILITY, PLUGIN_EXTENSIONS};
 use crate::strings::utf16_to_string;
 use crate::types::{IGCodecCapability, IGImageInfo, IGStatus, IGStringRef};
-use crate::{MAX_FILE_SIZE_BYTES, get_host_api};
+use crate::{get_host_api, MAX_FILE_SIZE_BYTES};
 
 // ---------------------------------------------------------------------------
 // Capability query
@@ -171,7 +171,7 @@ pub(crate) unsafe extern "C" fn codec_load_metadata(
             fill_image_info(info, w, h, file_size as i64);
             return IGStatus::Ok;
         }
-        // Fallback: look up the prefix in the built-in ProfileDb (covers all 54 profiles).
+        // Fallback: look up the prefix in the built-in ProfileDb (covers all 53 active profiles).
         let Ok(db) = ithmb_core::profile_db::ProfileDb::load_builtin() else {
             return IGStatus::Internal;
         };
