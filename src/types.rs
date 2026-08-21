@@ -50,48 +50,6 @@ pub enum IGStatus {
 }
 
 // ---------------------------------------------------------------------------
-// IGPixelFormat / IGColorSpace / IGHdrTransferFn
-//
-// ABI documentation only: the fields that carry these values are declared
-// `i32` in the structs above, exactly as in the header.
-// ---------------------------------------------------------------------------
-
-/// Pixel formats understood by the ABI (values from `ig_plugin_abi.h`).
-#[repr(i32)]
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum IGPixelFormat {
-    Unknown = 0,
-    Bgra8Unorm = 1,
-    Rgba8Unorm = 2,
-    Rgba16Unorm = 3,
-    RgbaFloat16 = 4,
-}
-
-/// Color spaces understood by the ABI (values from `ig_plugin_abi.h`).
-#[repr(i32)]
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum IGColorSpace {
-    Unknown = 0,
-    Srgb = 1,
-    LinearSrgb = 2,
-    DisplayP3 = 3,
-    AdobeRgb = 4,
-    Rec2020 = 5,
-    Rec2020Linear = 6,
-}
-
-/// HDR transfer functions understood by the ABI (values from `ig_plugin_abi.h`).
-#[repr(i32)]
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum IGHdrTransferFn {
-    None = 0,
-    Pq = 1,
-    Hlg = 2,
-    GainMap = 3,
-    Linear = 4,
-}
-
-// ---------------------------------------------------------------------------
 // IGStringRef
 // ---------------------------------------------------------------------------
 
