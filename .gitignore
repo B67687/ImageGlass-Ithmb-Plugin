@@ -1,4 +1,34 @@
-/target
+/*
+!/.gitignore
+!/.editorconfig
+!/.commitlintrc.json
+!/.pre-commit-config.yaml
+!/.github/
+!/.github/**
+!/*.md
+!/Cargo.lock
+!/Cargo.toml
+!/deny.toml
+!/igplugin.json
+!/LICENSE
+!/rust-toolchain.toml
+!/docs/
+!/docs/**
+!/scripts/
+!/scripts/**
+!/src/
+!/src/**
+!/tests/
+!/tests/**
+!/Makefile
+!/mise.toml
 
 # Build artifacts
-/dist
+/dist/
+/target/
+
+# Secrets
+/.env
+#MQ|
+#PL|# Private agent workspace — NEVER public
+#ZN|.omo/*
