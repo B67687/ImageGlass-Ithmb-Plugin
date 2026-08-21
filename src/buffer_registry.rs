@@ -98,6 +98,7 @@ impl BufferRegistry {
     ///
     /// If the underlying mutex is poisoned (a panic occurred while the lock
     /// was held), the recovered map is read rather than panicking.
+    #[cfg(test)]
     pub fn contains(&self, data: *mut u8) -> bool {
         let map = self.entries.lock().unwrap_or_else(PoisonError::into_inner);
         map.contains_key(&data)
@@ -107,6 +108,7 @@ impl BufferRegistry {
     ///
     /// If the underlying mutex is poisoned (a panic occurred while the lock
     /// was held), the recovered map is read rather than panicking.
+    #[cfg(test)]
     pub fn len(&self) -> usize {
         let map = self.entries.lock().unwrap_or_else(PoisonError::into_inner);
         map.len()
