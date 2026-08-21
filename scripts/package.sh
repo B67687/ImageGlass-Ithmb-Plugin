@@ -55,7 +55,7 @@ cat > "$PKG_DIR/igplugin.json" << IGMANIFEST
   "id": "Plugin_IthmbCodec",
   "name": "iThmb Codec",
   "description": "Native codec plugin that decodes Apple .ithmb thumbnail files (iPod/iPhone thumbnail databases) into viewable images in ImageGlass v10.",
-  "version": "1.1.0",
+  "version": "1.1.3",
   "author": "Nacai",
   "website": "https://github.com/B67687/ImageGlass-Ithmb-Plugin",
   "kind": "Codec",

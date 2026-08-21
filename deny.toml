@@ -11,3 +11,7 @@ wildcards = "warn"
 [sources]
 unknown-registry = "deny"
 unknown-git = "deny"
+
+# Explicit crates.io allowlist per dependency-management-standard Rule 12 /
+# Supply-Chain control 3 (trusted sources + integrity). Denies all other registries/git.
+allow-registry = ["https://github.com/rust-lang/crates.io-index"]

@@ -53,7 +53,7 @@ mod strings;
 use std::panic::catch_unwind;
 
 use crate::logging::Logger;
-use crate::state::{HOST_API, HostApiPtr, PLUGIN_STATE, ensure_initialized};
+use crate::state::{ensure_initialized, HostApiPtr, HOST_API, PLUGIN_STATE};
 use crate::types::{IGCodecApi, IGHostApi, IGPluginApi, IGStatus};
 
 // ---------------------------------------------------------------------------
@@ -183,6 +183,7 @@ pub fn get_host_api() -> Option<&'static IGHostApi> {
 /// * `null` if the ABI version is incompatible, `host_api` is null, or
 ///   initialisation fails.
 #[unsafe(no_mangle)]
+#[allow(clippy::not_unsafe_ptr_arg_deref)] // struct_size is the first field; validated non-null above
 pub extern "C" fn ig_plugin_get_api(
     host_abi_version: i32,
     host_api: *const IGHostApi,
@@ -193,6 +194,16 @@ pub extern "C" fn ig_plugin_get_api(
     }
 
     if host_api.is_null() {
+        return std::ptr::null();
+    }
+
+    // Validate the host API struct size before storing the pointer.  The
+    // host allocates `IGHostApi` and sets `struct_size` to its own `sizeof`;
+    // if it is smaller than ours, the host predates fields we read
+    // (`abi_version`, `core`) and reading them would be out of bounds.
+    // SAFETY: `host_api` was validated non-null above; `struct_size` is the
+    // first field of `IGHostApi` and is present in every host version.
+    if unsafe { (*host_api).struct_size } < std::mem::size_of::<IGHostApi>() as i32 {
         return std::ptr::null();
     }
 
@@ -236,6 +247,16 @@ mod tests {
     fn entry_point_rejects_mismatched_abi_major() {
         let host = leaked_host_api();
         let api = ig_plugin_get_api(2_000_000, std::ptr::from_ref(host));
+        assert!(api.is_null());
+    }
+    #[test]
+    fn entry_point_rejects_undersized_host_api() {
+        let host = Box::leak(Box::new(IGHostApi {
+            struct_size: 4, // undersized: only the struct_size field
+            abi_version: IG_PLUGIN_ABI_VERSION,
+            core: std::ptr::null(),
+        }));
+        let api = ig_plugin_get_api(IG_PLUGIN_ABI_VERSION, std::ptr::from_ref(host));
         assert!(api.is_null());
     }
 

@@ -6,7 +6,7 @@
 //! plugin has handed out to the host.
 
 use std::collections::HashMap;
-use std::sync::Mutex;
+use std::sync::{Mutex, PoisonError};
 
 use crate::types::IGStatus;
 
@@ -60,17 +60,14 @@ impl BufferRegistry {
 
     /// Registers a pixel-buffer allocation.
     ///
-    /// # Panics
-    ///
-    /// Panics if the underlying mutex is poisoned (a panic occurred while
-    /// the lock was held).
-    ///
     /// # Errors
     ///
     /// Returns [`IGStatus::InvalidArg`] when the pointer is already tracked
-    /// (potential double-register bug).
+    /// (potential double-register bug), or [`IGStatus::Internal`] when the
+    /// underlying mutex is poisoned (a panic occurred while the lock was
+    /// held).
     pub fn register(&self, data: *mut u8, size: usize) -> Result<(), IGStatus> {
-        let mut map = self.entries.lock().expect("BufferRegistry lock poisoned");
+        let mut map = self.entries.lock().map_err(|_| IGStatus::Internal)?;
         if map.contains_key(&data) {
             return Err(IGStatus::InvalidArg);
         }
@@ -87,52 +84,40 @@ impl BufferRegistry {
 
     /// Unregisters a buffer and returns its entry.
     ///
-    /// # Panics
-    ///
-    /// Panics if the underlying mutex is poisoned (a panic occurred while
-    /// the lock was held).
-    ///
     /// # Errors
     ///
-    /// Returns [`IGStatus::InvalidArg`] when the pointer is not tracked.
+    /// Returns [`IGStatus::InvalidArg`] when the pointer is not tracked, or
+    /// [`IGStatus::Internal`] when the underlying mutex is poisoned (a panic
+    /// occurred while the lock was held).
     pub fn unregister(&self, data: *mut u8) -> Result<BufferEntry, IGStatus> {
-        let mut map = self.entries.lock().expect("BufferRegistry lock poisoned");
+        let mut map = self.entries.lock().map_err(|_| IGStatus::Internal)?;
         map.remove(&data).ok_or(IGStatus::InvalidArg)
     }
 
     /// Returns `true` when the pointer is currently tracked.
     ///
-    /// # Panics
-    ///
-    /// Panics if the underlying mutex is poisoned (a panic occurred while
-    /// the lock was held).
-    #[must_use]
+    /// If the underlying mutex is poisoned (a panic occurred while the lock
+    /// was held), the recovered map is read rather than panicking.
     pub fn contains(&self, data: *mut u8) -> bool {
-        let map = self.entries.lock().expect("BufferRegistry lock poisoned");
+        let map = self.entries.lock().unwrap_or_else(PoisonError::into_inner);
         map.contains_key(&data)
     }
 
     /// Returns the number of tracked buffers.
     ///
-    /// # Panics
-    ///
-    /// Panics if the underlying mutex is poisoned (a panic occurred while
-    /// the lock was held).
-    #[must_use]
+    /// If the underlying mutex is poisoned (a panic occurred while the lock
+    /// was held), the recovered map is read rather than panicking.
     pub fn len(&self) -> usize {
-        let map = self.entries.lock().expect("BufferRegistry lock poisoned");
+        let map = self.entries.lock().unwrap_or_else(PoisonError::into_inner);
         map.len()
     }
 
     /// Returns `true` when no buffers are tracked.
     ///
-    /// # Panics
-    ///
-    /// Panics if the underlying mutex is poisoned (a panic occurred while
-    /// the lock was held).
-    #[must_use]
+    /// If the underlying mutex is poisoned (a panic occurred while the lock
+    /// was held), the recovered map is read rather than panicking.
     pub fn is_empty(&self) -> bool {
-        let map = self.entries.lock().expect("BufferRegistry lock poisoned");
+        let map = self.entries.lock().unwrap_or_else(PoisonError::into_inner);
         map.is_empty()
     }
 }

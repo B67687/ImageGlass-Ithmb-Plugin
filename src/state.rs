@@ -17,10 +17,11 @@ use crate::codec::{
 use crate::decode::{codec_decode_static_raster, codec_free_pixel_buffer};
 use crate::strings::encode_utf16;
 use crate::types::{
-    IGCodecApi, IGCodecCapability, IGHostApi, IGPluginApi, IGPluginInfo, IGStringRef,
+    ig_string_ref_null, IGCodecApi, IGCodecCapability, IGHostApi, IGPluginApi, IGPluginInfo,
+    IGStringRef,
 };
 use crate::{
-    IG_PLUGIN_ABI_VERSION, plugin_get_codec, plugin_initialize, plugin_self_test, plugin_shutdown,
+    plugin_get_codec, plugin_initialize, plugin_self_test, plugin_shutdown, IG_PLUGIN_ABI_VERSION,
 };
 
 // ---------------------------------------------------------------------------
@@ -214,23 +215,32 @@ pub(crate) fn ensure_initialized() {
 /// `PLUGIN_STATE` are initialized, so its string refs can point into the
 /// stable `PluginState` buffers.
 fn build_capability() -> CodecCapabilityStorage {
-    let state = PLUGIN_STATE
-        .get()
-        .expect("PLUGIN_STATE initialized before CAPABILITY");
+    let state = PLUGIN_STATE.get();
     let extensions_ptr = PLUGIN_EXTENSIONS
         .get()
         .map_or(std::ptr::null(), |e| e.0.as_ptr());
 
+    // `PLUGIN_STATE` is always initialized before `CAPABILITY` by
+    // `ensure_initialized`; if it is ever absent, fall back to null string
+    // refs rather than panicking (a panic would abort the host process).
+    let (codec_id, codec_name) = match state {
+        Some(s) => (
+            IGStringRef {
+                data: s.plugin_id.as_ptr(),
+                length: s.plugin_id.len() as i32,
+            },
+            IGStringRef {
+                data: s.cap_name.as_ptr(),
+                length: s.cap_name.len() as i32,
+            },
+        ),
+        None => (ig_string_ref_null(), ig_string_ref_null()),
+    };
+
     CodecCapabilityStorage(IGCodecCapability {
         struct_size: std::mem::size_of::<IGCodecCapability>() as i32,
-        codec_id: IGStringRef {
-            data: state.plugin_id.as_ptr(),
-            length: state.plugin_id.len() as i32,
-        },
-        codec_name: IGStringRef {
-            data: state.cap_name.as_ptr(),
-            length: state.cap_name.len() as i32,
-        },
+        codec_id,
+        codec_name,
         metadata_priority: 200,
         decode_priority: 200,
         supports_metadata: 1,
