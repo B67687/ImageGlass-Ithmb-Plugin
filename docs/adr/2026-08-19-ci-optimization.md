@@ -1,8 +1,8 @@
 # ADR-0001: CI optimization — pinned prebuilt tools, unit tests, Windows export verification
 
-**Status**: Accepted (2026-08-19)
+**Status:** Accepted (2026-08-19)
 
-**Context**
+## Context
 
 The plugin's CI ran five jobs on every push/PR (build ×3-OS, verify_clippy,
 verify_deny, secrets, release-on-tag). Three inefficiencies and one coverage

@@ -1,6 +1,10 @@
 # Changelog
 
-## v1.1.3 (2026-08-16) — Update ithmb-core to 1.9.9
+## [Unreleased]
+
+## [1.1.3] - 2026-08-16
+
+Update ithmb-core to 1.9.9.
 
 ### Changed
 - **ithmb-core 1.9.6 → 1.9.9**: JPEG decoding migrated from the maintenance-mode `jpeg-decoder` to `zune-jpeg` 0.5.15 (actively maintained, SIMD-accelerated). Pixel output is equivalent (±1-3/255 IDCT rounding variance — standards-compliant; grayscale JPEGs now decode correctly). The CWE-400 oversized-frame guard is preserved.
@@ -9,7 +13,9 @@
 ### Notes
 - Cargo.lock regenerated against the crates.io index (pins ithmb-core 1.9.9).
 
-## v1.1.1 (2026-08-14) — Update ithmb-core to 1.9.6
+## [1.1.1] - 2026-08-14
+
+Update ithmb-core to 1.9.6.
 
 ### Changed
 - **ithmb-core 1.9.5 → 1.9.6**: ships the Nano 7G cover-art alternates fix,
@@ -20,7 +26,9 @@
 ### Notes
 - Cargo.lock regenerated against the crates.io index (pins ithmb-core 1.9.6).
 
-## v1.1.0 (2026-08-06) — SDK v1.1.0 ABI port & hardening
+## [1.1.0] - 2026-08-06
+
+SDK v1.1.0 ABI port & hardening.
 
 ### Changed
 - **SDK v1.1.0 ABI port (decode-only)**: `IGCodecApi` is now StructSize-first
@@ -54,8 +62,7 @@
 ### Notes
 - Requires ImageGlass build 10.0.3.805+ (host validates `IGCodecApi.StructSize`).
 
-
-## v1.0.0 (2026-07-13) — Fixed plugin manifest & ABI
+## [1.0.0] - 2026-07-13
 
 Initial ImageGlass v10 native codec plugin for decoding Apple `.ithmb` thumbnail files.
 
@@ -85,3 +92,8 @@ Initial ImageGlass v10 native codec plugin for decoding Apple `.ithmb` thumbnail
 - `.igplugin.zip` format for ImageGlass v10 plugin manager
 - Install via Settings -> Plugins -> Add
 - Pre-compiled binaries for all 3 platforms in GitHub Releases
+
+[1.1.3]: https://github.com/B67687/ImageGlass-Ithmb-Plugin/compare/v1.1.1...v1.1.3
+[1.1.1]: https://github.com/B67687/ImageGlass-Ithmb-Plugin/compare/v1.1.0...v1.1.1
+[1.1.0]: https://github.com/B67687/ImageGlass-Ithmb-Plugin/compare/v1.0.0...v1.1.0
+[1.0.0]: https://github.com/B67687/ImageGlass-Ithmb-Plugin/releases/tag/v1.0.0

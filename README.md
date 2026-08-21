@@ -6,6 +6,7 @@
 
 <a href="LICENSE"><img src="https://cdn.jsdelivr.net/gh/B67687/ImageGlass-Ithmb-Plugin@main/docs/badges/license.svg" alt="License: MIT"></a>
 <a href="https://rust-lang.org"><img src="https://cdn.jsdelivr.net/gh/B67687/ImageGlass-Ithmb-Plugin@main/docs/badges/rust.svg" alt="Rust 1.88+"></a>
+<a href="https://github.com/B67687/ImageGlass-Ithmb-Plugin/actions"><img src="https://github.com/B67687/ImageGlass-Ithmb-Plugin/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
 
 <p align="center"><a href="https://cdn.jsdelivr.net/gh/B67687/ImageGlass-Ithmb-Plugin@main/docs/decoded-example.png"><img src="https://cdn.jsdelivr.net/gh/B67687/ImageGlass-Ithmb-Plugin@main/docs/decoded-example.png" alt="Decoded .ithmb sample (720×480 YCbCr 4:2:0)" width="480"></a><br>
 720×480 YCbCr 4:2:0, decoded by ithmb-core v1.9.6.</p>
@@ -27,7 +28,7 @@ C ABI plugin for [ImageGlass](https://imageglass.org) v10 to decode `.ithmb` thu
 
 > **Prefer a browser?** The [ITHMB Codec Web tool](https://ithmb-codec.dev/ithmb-decoder/) decodes .ithmb files online — no install needed, works on any OS, 100% private.
 
-## Build & Package
+## Quick Start
 
 ```bash
 # Build the cdylib

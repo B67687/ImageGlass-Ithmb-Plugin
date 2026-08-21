@@ -1,0 +1,12 @@
+# mise.toml — Tool version management
+# Schema reference: https://mise.jdx.dev/configuration.html
+
+min_version = "2024.1.1"
+
+[tools]
+# Rust toolchain is pinned by rust-toolchain.toml; mirrored here for mise users.
+rust = "1.88.0"
+
+[env]
+# Scripts in scripts/ should be discoverable
+_.path = ["./scripts"]
