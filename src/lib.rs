@@ -47,13 +47,14 @@ pub mod types;
 
 mod codec;
 mod decode;
+mod file_io;
 mod state;
 mod strings;
 
 use std::panic::catch_unwind;
 
 use crate::logging::Logger;
-use crate::state::{ensure_initialized, HostApiPtr, HOST_API, PLUGIN_STATE};
+use crate::state::{HOST_API, HostApiPtr, PLUGIN_STATE, ensure_initialized};
 use crate::types::{IGCodecApi, IGHostApi, IGPluginApi, IGStatus};
 
 // ---------------------------------------------------------------------------

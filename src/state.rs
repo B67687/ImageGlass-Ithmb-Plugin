@@ -207,6 +207,9 @@ pub(crate) fn ensure_initialized() {
     //    PLUGIN_STATE buffers and the PLUGIN_EXTENSIONS static — all stable
     //    after initialization).
     let _ = CAPABILITY.get_or_init(build_capability);
+
+    // 4. Buffer registry (live pixel-buffer tracking).
+    let _ = BUFFER_REGISTRY.get_or_init(BufferRegistry::new);
 }
 
 /// Builds the plugin-lifetime codec capability.

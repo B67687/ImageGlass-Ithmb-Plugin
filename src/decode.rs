@@ -15,17 +15,13 @@ use libc::c_void;
 use ithmb_core::decode_ithmb;
 
 use crate::allocator;
+#[allow(unused_imports)]
 use crate::buffer_registry::BufferRegistry;
-use crate::logging::Logger;
+use crate::get_host_api;
+use crate::logging::{log_error, Logger};
 use crate::state::BUFFER_REGISTRY;
 use crate::strings::utf16_to_string;
 use crate::types::{ig_status_from_decode_error, IGPixelBuffer, IGStatus, IGStringRef};
-use crate::{get_host_api, MAX_FILE_SIZE_BYTES};
-
-/// Returns the global [`BufferRegistry`] instance.
-fn get_buffer_registry() -> &'static BufferRegistry {
-    BUFFER_REGISTRY.get_or_init(BufferRegistry::new)
-}
 
 /// Decodes a static raster frame from an .ithmb file into the caller's
 /// [`IGPixelBuffer`].
@@ -50,31 +46,21 @@ pub(crate) unsafe extern "C" fn codec_decode_static_raster(
             return IGStatus::InvalidArg;
         }
 
-        // ---- Pre-size check BEFORE reading (same rule as `codec_load_metadata`) ----
-        let Ok(metadata) = std::fs::metadata(&path_str) else {
-            return IGStatus::IoError;
-        };
-        if metadata.len() > MAX_FILE_SIZE_BYTES {
-            return IGStatus::DecodeFailed;
-        }
-
         // ---- Read file ----
-        let file_bytes = match std::fs::read(&path_str) {
+        let file_bytes = match crate::file_io::read_ithmb_file(&path_str) {
             Ok(data) => data,
-            Err(e) => {
+            Err(status) => {
                 if let Some(host_api) = get_host_api().filter(|api| !api.core.is_null()) {
                     let logger = Logger::new(host_api.core);
                     // SAFETY: `host_api.core` was filtered non-null above and
-                    // `Logger::error` only calls the host's Log function.
-                    unsafe {
-                        logger.error(&format!("ithmb-codec: failed to read file: {e}"));
-                    }
+                    // `log_error!` only calls the host's Log function.
+                    log_error!(logger, "ithmb-codec: failed to read file: {status:?}");
                 }
-                return IGStatus::IoError;
+                return status;
             }
         };
 
-        // ---- Set up cancellation (poll host's cancellation inline) ----
+        // ---- Cooperative cancellation flag for decode_ithmb ----
         let canceled = Arc::new(AtomicBool::new(false));
 
         // ---- Decode ----
@@ -117,7 +103,7 @@ pub(crate) unsafe extern "C" fn codec_decode_static_raster(
         }
 
         // ---- Register buffer ----
-        let registry = get_buffer_registry();
+        let registry = BUFFER_REGISTRY.get().unwrap();
         if registry.register(data_ptr, buf_size).is_err() {
             // SAFETY: `data_ptr` is our own allocation from
             // `allocator::pixel_buffer_alloc`, not yet registered anywhere.
@@ -171,7 +157,7 @@ pub(crate) unsafe extern "C" fn codec_free_pixel_buffer(buffer: *mut IGPixelBuff
         }
 
         // Unregister from buffer registry
-        let registry = get_buffer_registry();
+        let registry = BUFFER_REGISTRY.get().unwrap();
         if registry.unregister(data_ptr).is_err() {
             return;
         }

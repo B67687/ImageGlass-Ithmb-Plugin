@@ -9,11 +9,11 @@ use std::panic::catch_unwind;
 
 use libc::c_void;
 
+use crate::get_host_api;
 use crate::logging::Logger;
 use crate::state::{CAPABILITY, PLUGIN_EXTENSIONS};
 use crate::strings::utf16_to_string;
 use crate::types::{IGCodecCapability, IGImageInfo, IGStatus, IGStringRef};
-use crate::{get_host_api, MAX_FILE_SIZE_BYTES};
 
 // ---------------------------------------------------------------------------
 // Capability query
@@ -149,22 +149,11 @@ pub(crate) unsafe extern "C" fn codec_load_metadata(
         // Pre-size check BEFORE reading: the profile database only covers
         // thumbnail-sized images, and 8 MiB is far beyond any real .ithmb
         // payload.  Reject oversized inputs without pulling them into memory.
-        let Ok(metadata) = std::fs::metadata(&path_str) else {
-            return IGStatus::IoError;
+        let (prefix_bytes, file_size) = match crate::file_io::read_ithmb_prefix(&path_str) {
+            Ok(result) => result,
+            Err(status) => return status,
         };
-        let file_size = metadata.len();
-        if file_size > MAX_FILE_SIZE_BYTES {
-            return IGStatus::DecodeFailed;
-        }
-
-        let Ok(file_bytes) = std::fs::read(&path_str) else {
-            return IGStatus::IoError;
-        };
-        if file_bytes.len() < 4 {
-            return IGStatus::DecodeFailed;
-        }
-        let prefix =
-            i32::from_be_bytes([file_bytes[0], file_bytes[1], file_bytes[2], file_bytes[3]]);
+        let prefix = i32::from_be_bytes(prefix_bytes);
         // Fast path: try device profiles (covers common device models).
         let formats = ithmb_core::device_profiles::find_formats_by_id(prefix);
         if let Some((w, h)) = formats.iter().find_map(|f| parse_dimensions(f.description)) {

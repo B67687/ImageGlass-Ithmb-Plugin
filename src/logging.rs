@@ -12,7 +12,7 @@
 //! means the host-provided API table is valid for the entire lifetime of
 //! the plugin.
 
-use crate::types::{IGHostCoreApi, ig_string_ref_from_str};
+use crate::types::{ig_string_ref_from_str, IGHostCoreApi};
 
 // ---------------------------------------------------------------------------
 // LogLevel
@@ -128,3 +128,50 @@ impl Logger {
         unsafe { self.log(LogLevel::Error, message) }
     }
 }
+
+/// Convenience macros that accept `format!`-style arguments, avoiding
+/// a temporary `String` at the call site.
+///
+/// # Safety
+///
+/// Same safety contract as [`Logger::log`].
+///
+/// # Examples
+///
+/// ```ignore
+/// let logger = Logger::new(host_api.core);
+/// // SAFETY: `host_api` is valid and alive for the duration of the call.
+/// unsafe {
+///     logger.info!("plugin initialised");
+///     logger.error!("failed to read file: {status:?}");
+/// }
+/// ```
+#[allow(unused_macros)]
+macro_rules! log_info {
+    ($logger:expr, $($arg:tt)*) => {
+        // Safety: deferred to the caller.
+        unsafe { $logger.log($crate::logging::LogLevel::Info, &format!($($arg)*)) }
+    };
+}
+
+#[allow(unused_macros)]
+macro_rules! log_warn {
+    ($logger:expr, $($arg:tt)*) => {
+        // Safety: deferred to the caller.
+        unsafe { $logger.log($crate::logging::LogLevel::Warning, &format!($($arg)*)) }
+    };
+}
+
+#[allow(unused_macros)]
+macro_rules! log_error {
+    ($logger:expr, $($arg:tt)*) => {
+        // Safety: deferred to the caller.
+        unsafe { $logger.log($crate::logging::LogLevel::Error, &format!($($arg)*)) }
+    };
+}
+
+pub(crate) use log_error;
+#[allow(unused_imports)]
+pub(crate) use log_info;
+#[allow(unused_imports)]
+pub(crate) use log_warn;

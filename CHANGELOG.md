@@ -2,6 +2,12 @@
 
 ## [Unreleased]
 
+### Changed
+- **File-read deduplication**: extracted shared `read_ithmb_file()` and `read_ithmb_prefix()` helpers into `src/file_io.rs`. Codec and decoder now use shared I/O instead of duplicated `std::fs::read` calls.
+- **Prefix check optimization**: `get_image_info` reads only 4 bytes for prefix detection instead of full file.
+- **Logging**: replaced `format!` allocations at call sites with log macros.
+- **Init centralization**: `BUFFER_REGISTRY` initialization consolidated in `ensure_initialized`.
+
 ## [1.1.3] - 2026-08-16
 
 Update ithmb-core to 1.9.9.
