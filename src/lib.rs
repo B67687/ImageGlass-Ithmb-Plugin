@@ -54,7 +54,7 @@ mod strings;
 use std::panic::catch_unwind;
 
 use crate::logging::Logger;
-use crate::state::{HOST_API, HostApiPtr, PLUGIN_STATE, ensure_initialized};
+use crate::state::{ensure_initialized, HostApiPtr, HOST_API, PLUGIN_STATE};
 use crate::types::{IGCodecApi, IGHostApi, IGPluginApi, IGStatus};
 
 // ---------------------------------------------------------------------------
@@ -238,11 +238,15 @@ mod tests {
         }))
     }
 
+    /// F-001: null `host_api` must be rejected → null
+
     #[test]
     fn entry_point_rejects_null_host_api() {
         let api = ig_plugin_get_api(IG_PLUGIN_ABI_VERSION, std::ptr::null());
         assert!(api.is_null());
     }
+
+    /// F-001: ABI version mismatch must be rejected → null
 
     #[test]
     fn entry_point_rejects_mismatched_abi_major() {
@@ -250,6 +254,8 @@ mod tests {
         let api = ig_plugin_get_api(2_000_000, std::ptr::from_ref(host));
         assert!(api.is_null());
     }
+    /// F-001: undersized `host_api` must be rejected → null
+
     #[test]
     fn entry_point_rejects_undersized_host_api() {
         let host = Box::leak(Box::new(IGHostApi {
@@ -260,6 +266,8 @@ mod tests {
         let api = ig_plugin_get_api(IG_PLUGIN_ABI_VERSION, std::ptr::from_ref(host));
         assert!(api.is_null());
     }
+
+    /// F-001, F-002: valid `host_api` must return populated plugin API table
 
     #[test]
     fn entry_point_returns_valid_plugin_api() {
@@ -303,6 +311,32 @@ mod tests {
         assert!(codec_api.get_animation_info.is_none());
         assert!(codec_api.encode_static_raster.is_none());
     }
+
+    /// F-001: `self_test` function must return Ok through the plugin API
+    #[test]
+    fn self_test_succeeds() {
+        let host = leaked_host_api();
+        let api = ig_plugin_get_api(IG_PLUGIN_ABI_VERSION, std::ptr::from_ref(host));
+        assert!(!api.is_null());
+        let plugin_api = unsafe { &*api };
+        let self_test = plugin_api.self_test.expect("self_test present");
+        // SAFETY: self_test takes no arguments and returns IGStatus.
+        let status = unsafe { self_test() };
+        assert_eq!(status, IGStatus::Ok);
+    }
+
+    /// F-001: UTF-16 encode/decode roundtrip must preserve content
+    #[test]
+    fn test_utf16_roundtrip() {
+        let original = "Hello, ithmb!";
+        let (buf, string_ref) = crate::types::ig_string_ref_from_str(original);
+        assert!(string_ref.length > 0);
+        let decoded = crate::strings::utf16_to_string(&string_ref);
+        assert_eq!(decoded.as_deref(), Some(original));
+        drop(buf);
+    }
+
+    /// F-002: ABI struct sizes must match C header exactly
 
     #[test]
     fn test_abi_struct_sizes() {

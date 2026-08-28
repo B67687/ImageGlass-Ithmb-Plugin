@@ -139,6 +139,7 @@ mod tests {
     use super::*;
     use std::ptr;
 
+    /// F-006: register+check must work for a single entry
     #[test]
     fn register_and_contains() {
         let reg = BufferRegistry::new();
@@ -150,6 +151,7 @@ mod tests {
         assert_eq!(reg.len(), 1);
     }
 
+    /// F-006: double register of same pointer must fail
     #[test]
     fn register_double_is_error() {
         let reg = BufferRegistry::new();
@@ -159,6 +161,7 @@ mod tests {
         assert_eq!(reg.register(data, 64), Err(IGStatus::InvalidArg));
     }
 
+    /// F-006: unregister must remove the entry
     #[test]
     fn unregister_removes_entry() {
         let reg = BufferRegistry::new();
@@ -173,12 +176,14 @@ mod tests {
         assert!(reg.is_empty());
     }
 
+    /// F-006: unregister of unknown pointer must fail
     #[test]
     fn unregister_unknown_is_error() {
         let reg = BufferRegistry::new();
         assert_eq!(reg.unregister(0xDEAD as *mut u8), Err(IGStatus::InvalidArg));
     }
 
+    /// F-006: empty registry must report len 0
     #[test]
     fn empty_registry() {
         let reg = BufferRegistry::new();
@@ -186,6 +191,7 @@ mod tests {
         assert_eq!(reg.len(), 0);
     }
 
+    /// F-006: multiple entries must be tracked correctly
     #[test]
     fn multiple_entries() {
         let reg = BufferRegistry::new();
@@ -209,6 +215,7 @@ mod tests {
         assert!(reg.contains(c));
     }
 
+    /// F-006: null pointer must be a valid registry key
     #[test]
     fn null_pointer_is_valid_key() {
         let reg = BufferRegistry::new();

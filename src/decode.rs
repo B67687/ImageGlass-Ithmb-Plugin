@@ -190,6 +190,7 @@ mod tests {
         }
     }
 
+    /// F-006: null buffer pointer must be rejected → `InvalidArg`
     #[test]
     fn decode_rejects_null_buffer() {
         ensure_initialized();
@@ -202,6 +203,7 @@ mod tests {
         drop(path);
     }
 
+    /// F-006: nonzero frame index must be rejected → `InvalidArg`
     #[test]
     fn decode_rejects_nonzero_frame_index() {
         ensure_initialized();
@@ -221,6 +223,7 @@ mod tests {
         drop(path);
     }
 
+    /// F-006: missing file must return `IoError`
     #[test]
     fn decode_missing_file_is_io_error() {
         ensure_initialized();
@@ -243,6 +246,7 @@ mod tests {
 
     /// End-to-end roundtrip: encode a real 80×80 RGB565 .ithmb fixture with
     /// ithmb-core, decode it through the plugin FFI, and verify the buffer.
+    /// F-006: encode+decode roundtrip must preserve pixel data
     #[test]
     fn decode_roundtrips_encoded_fixture() {
         ensure_initialized();
@@ -428,6 +432,7 @@ mod fuzz {
     }
 
     /// Every mutated input must decode to `Ok` or `Err` — never unwind.
+    /// F-007: 3000-mutation pseudo-fuzz must never unwind
     #[test]
     fn mutated_inputs_never_panic_the_decoder() {
         let mut rng = XorShift64 { state: SEED };

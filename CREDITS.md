@@ -7,6 +7,6 @@ outcome in ways neither of us predicted alone.
 
 ## AI Contributions
 
-| Phase | Model | Harness | Role |
-|-------|-------|---------|------|
-| Full development | (model name) | (harness name) | AI: implementation, research, & discussion · Human: oversight & goals |
+| Phase            | Model                          | Harness              | Role                                          |
+| ---------------- | ------------------------------ | -------------------- | --------------------------------------------- |
+| Full development | DeepSeek V4 Flash (high)       | Oh My OpenAgent      | AI: implementation, research, & discussion · Human: oversight & goals |

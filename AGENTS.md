@@ -63,6 +63,19 @@ ithmb-core (crates.io dependency `ithmb-core = "1.9"`, compiled statically into 
 └── README.md                 # Project overview + usage
 ```
 
+## SE Lifecycle Artifacts
+
+| Artifact | Location |
+|----------|----------|
+| Feature Inventory | [docs/FEATURES.md](docs/FEATURES.md) (F-001..F-010) |
+| System Specification | [SPECIFICATION.md](SPECIFICATION.md) (567 lines) |
+| Architecture | [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) |
+| Technical Debt Audit | [TECH_DEBT_AUDIT.md](TECH_DEBT_AUDIT.md) |
+| Architecture Decision Records | [docs/adr/](docs/adr/) (2 ADRs) |
+| Local CI Gate | [scripts/check-local.sh](scripts/check-local.sh) + [scripts/check-parity.sh](scripts/check-parity.sh) |
+
+Feature lifecycle follows Development-Protocol docs/engineering-plugin.md §1.1: proposed → approved → applied → archived.
+
 ## Key Facts
 
 - **Language**: Rust (cdylib), crate `ithmb-core-cabi` v1.1.3, edition 2024

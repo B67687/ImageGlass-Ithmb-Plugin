@@ -8,6 +8,9 @@
 - **Logging**: replaced `format!` allocations at call sites with log macros.
 - **Init centralization**: `BUFFER_REGISTRY` initialization consolidated in `ensure_initialized`.
 
+### Added
+- **SE retrofit**: scaffolded missing engineering stack — docs/FEATURES.md (behavior contracts + test anchoring), docs/ARCHITECTURE.md (C4 diagram + fitness functions), docs/adr/ADR-001-plugin-architecture.md, enriched README.md (150+ lines), F-### trace tags on all tests, 2 new tests (self_test, utf16 roundtrip), check-local.sh F-### anchor grep + wc -l fitness gates.
+
 ## [1.1.3] - 2026-08-16
 
 Update ithmb-core to 1.9.9.

@@ -34,6 +34,12 @@ C ABI plugin for [ImageGlass](https://imageglass.org) v10 to decode `.ithmb` thu
 # Build the cdylib
 cargo build --release
 
+# Run all tests (26 unit tests + pseudo-fuzz)
+cargo test
+
+# Run local CI gates (clippy, test, build, deny, gitleaks, F-### anchors, fitness)
+./scripts/check-local.sh
+
 # Package as .igplugin.zip (auto-detects host platform)
 ./scripts/package.sh
 
@@ -44,6 +50,52 @@ cargo build --release
 ```
 
 Output: `dist/ithmb-codec-<platform>.igplugin.zip` (binary + manifest).
+
+## Architecture
+
+```
+┌─────────────────────────────────────┐
+│         ImageGlass Host (C#)        │
+│  Plugin Loader → dlopen/LoadLibrary │
+└──────────────────┬──────────────────┘
+                   │ C ABI (ig_plugin_get_api)
+                   ▼
+┌─────────────────────────────────────┐
+│     ithmb-core-cabi (this plugin)   │
+│                                     │
+│  lib.rs       — C ABI entry point   │
+│  codec.rs     — capability, exts    │
+│  decode.rs    — raster decode       │
+│  buffer_registry.rs — buffer track  │
+│  state.rs     — OnceLock statics    │
+│  types.rs     — #[repr(C)] ABI      │
+│  strings.rs   — UTF-16 helpers      │
+│  allocator.rs — libc malloc/free    │
+│  logging.rs   — IGHost logger       │
+│  file_io.rs   — file read helpers   │
+│                                     │
+│  ┌───────────────────────────────┐  │
+│  │    ithmb-core (dependency)    │  │
+│  │  ProfileDb · decode · encode  │  │
+│  └───────────────────────────────┘  │
+└─────────────────────────────────────┘
+```
+
+### Module Overview
+
+| Module | LOC | Responsibility |
+|--------|-----|----------------|
+| `src/lib.rs` | 316 | C ABI entry point, plugin lifecycle (init/shutdown/self_test) |
+| `src/types.rs` | 430 | `#[repr(C)]` ABI types (IGPluginApi, IGCodecApi, IGHostApi, etc.) |
+| `src/codec.rs` | 420 | Capability query, extension matching, metadata loading |
+| `src/decode.rs` | 482 | Static raster decode, buffer allocation, pseudo-fuzz harness |
+| `src/buffer_registry.rs` | 223 | Thread-safe buffer tracking (Mutex<HashMap>) |
+| `src/state.rs` | 261 | OnceLock statics, initialization, capability builder |
+| `src/strings.rs` | 23 | UTF-16 encode/decode for ABI string refs |
+| `src/allocator.rs` | 35 | libc malloc/free wrappers |
+| `src/logging.rs` | 177 | Logger wrapping IGHostCoreApi::log |
+| `src/file_io.rs` | 51 | File read helpers (full and prefix-only) |
+| **Total** | **~2418** | |
 
 ## ImageGlass Integration (v10+)
 
@@ -61,7 +113,18 @@ Output: `dist/ithmb-codec-<platform>.igplugin.zip` (binary + manifest).
 | `src/` | Rust cdylib, ImageGlass native plugin ABI (SDK v1.1.0) |
 | `igplugin.json` | Plugin manifest (id, name, executable, kind) |
 | `scripts/package.sh` | Build + package into `.igplugin.zip` |
+| `scripts/check-local.sh` | Full local CI (clippy, test, build, deny, gitleaks, F-###, fitness) |
+| `scripts/abi-smoke.py` | Cross-language ABI smoke test |
 | `.github/workflows/ci.yml` | CI: build + clippy + deny + package artifacts |
+
+## Scripts
+
+| Script | Purpose | CI equivalent |
+|--------|---------|---------------|
+| `scripts/check-local.sh` | Run all local CI gates | Mirror of CI verify_clippy + verify_deny + build |
+| `scripts/package.sh` | Package cdylib into `.igplugin.zip` | CI build job artifact |
+| `scripts/abi-smoke.py` | Load cdylib + exercise full codec path | CI build job smoke step |
+| `scripts/check-parity.sh` | Verify local vs CI output parity | — |
 
 ## FFI from Other Languages
 
@@ -76,6 +139,29 @@ The plugin implements the ImageGlass SDK v1.1.0 codec contract (decode-only;
 function pointers are null). Requires ImageGlass build **10.0.3.805+**.
 
 See the [ImageGlass plugin SDK](https://github.com/ImageGlass/SDK) for details.
+
+## Features
+
+See [docs/FEATURES.md](docs/FEATURES.md) for the full feature inventory with behavior contracts and test anchoring.
+
+**Summary:** 10 features covering C ABI entry, ABI layout, codec capability, extension matching, metadata loading, static raster decode, panic-free decode, ABI smoke test, packaging, and CI gates.
+
+## Engineering Artifacts
+
+| Artifact | Purpose | Link |
+|----------|---------|------|
+| SPECIFICATION.md | System spec (MACRO/MESO/MICRO, EARS) | [SPECIFICATION.md](SPECIFICATION.md) |
+| FEATURES.md | Feature inventory + behavior contracts | [docs/FEATURES.md](docs/FEATURES.md) |
+| ARCHITECTURE.md | System architecture + fitness functions | [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) |
+| TECH_DEBT_AUDIT.md | Technical debt triage | [TECH_DEBT_AUDIT.md](TECH_DEBT_AUDIT.md) |
+| CHANGELOG.md | Release history | [CHANGELOG.md](CHANGELOG.md) |
+| EXPLAINER.md | Code explainer | [EXPLAINER.md](EXPLAINER.md) |
+
+## Tech Debt
+
+See [TECH_DEBT_AUDIT.md](TECH_DEBT_AUDIT.md) for the full triaged list. All 14 findings are resolved or accepted.
+
+- **Resolved (14):** D1–D4, M1–M8, A1–A2 — see [TECH_DEBT_AUDIT.md](TECH_DEBT_AUDIT.md)
 
 ## License
 

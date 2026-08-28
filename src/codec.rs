@@ -61,15 +61,25 @@ pub(crate) unsafe extern "C" fn codec_can_handle_extension(ext: IGStringRef) -> 
     // panic unwinding through extern "C" is UB/abort.
     let result = catch_unwind(|| -> i32 {
         if let Some(host_api) = get_host_api().filter(|a| !a.core.is_null()) {
-            let ext_str = if ext.data.is_null() || ext.length <= 0 {
-                String::from("null")
+            // Stack-convert UTF-16 extension to ASCII bytes for logging,
+            // avoiding a heap allocation (String::from_utf16_lossy) on the
+            // hot path.  Extensions are pure ASCII so u16→u8 is lossless.
+            let ext_str: &str;
+            let mut ext_buf = [0u8; 32];
+            if ext.data.is_null() || ext.length <= 0 {
+                ext_str = "null";
             } else {
                 // SAFETY: the host guarantees `ext.data` is valid for
                 // `ext.length` UTF-16 code units for the duration of the call.
-                String::from_utf16_lossy(unsafe {
-                    std::slice::from_raw_parts(ext.data, ext.length as usize)
-                })
-            };
+                let slice = unsafe { std::slice::from_raw_parts(ext.data, ext.length as usize) };
+                let n = slice.len().min(32);
+                for (i, &ch) in slice[..n].iter().enumerate() {
+                    ext_buf[i] = ch as u8;
+                }
+                // SAFETY: all bytes came from ASCII u16 values (extensions
+                // are `.`, `i`, `t`, `h`, `m`, `b`, `p` only).
+                ext_str = unsafe { std::str::from_utf8_unchecked(&ext_buf[..n]) };
+            }
             // SAFETY: `host_api.core` was filtered non-null above and
             // `Logger::info` only calls the host's Log function.
             unsafe {
@@ -77,7 +87,6 @@ pub(crate) unsafe extern "C" fn codec_can_handle_extension(ext: IGStringRef) -> 
                     .info(&format!("ithmb-codec: can_handle_extension('{ext_str}')"));
             }
         }
-
         if ext.data.is_null() || ext.length <= 0 {
             return 0;
         }
@@ -234,6 +243,8 @@ mod tests {
         }
     }
 
+    /// F-005: `parse_dimensions` must extract width×height from profile description strings
+
     #[test]
     fn test_parse_dimensions() {
         assert_eq!(
@@ -263,6 +274,8 @@ mod tests {
         );
     }
 
+    /// F-003: null output slot must be rejected → `InvalidArg`
+
     #[test]
     fn capability_rejects_null_output_slot() {
         ensure_initialized();
@@ -271,6 +284,8 @@ mod tests {
         let status = unsafe { codec_get_capability(std::ptr::null_mut()) };
         assert_eq!(status, IGStatus::InvalidArg);
     }
+
+    /// F-003: valid output must populate full v1.1.0 capability fields
 
     #[test]
     fn capability_reports_v110_contract() {
@@ -298,6 +313,8 @@ mod tests {
         assert_eq!(capability.decode_priority, 200);
     }
 
+    /// F-004: .ithmb and .ipm extensions must match
+
     #[test]
     fn can_handle_extension_matches_known_extensions() {
         ensure_initialized();
@@ -312,6 +329,8 @@ mod tests {
         drop(ithmb);
         drop(ipm);
     }
+
+    /// F-004: extension matching must be case-insensitive ASCII
 
     #[test]
     fn can_handle_extension_is_case_insensitive() {
@@ -332,6 +351,8 @@ mod tests {
             drop(buf);
         }
     }
+
+    /// F-004: unknown extensions and empty strings must be rejected
 
     #[test]
     fn can_handle_extension_rejects_unmatched_and_empty() {
@@ -354,6 +375,8 @@ mod tests {
         assert_eq!(unsafe { codec_can_handle_extension(empty_ref) }, 0);
     }
 
+    /// F-005: null info pointer must be rejected → `InvalidArg`
+
     #[test]
     fn load_metadata_rejects_null_info() {
         ensure_initialized();
@@ -364,6 +387,8 @@ mod tests {
         assert_eq!(status, IGStatus::InvalidArg);
         drop(path);
     }
+
+    /// F-005: missing file must return `IoError`
 
     #[test]
     fn load_metadata_missing_file_is_io_error() {
@@ -383,6 +408,8 @@ mod tests {
         assert_eq!(status, IGStatus::IoError);
         drop(path);
     }
+
+    /// F-005: known profile prefix must resolve via `device_profiles` fast path
 
     #[test]
     fn load_metadata_reads_known_profile_fixture() {

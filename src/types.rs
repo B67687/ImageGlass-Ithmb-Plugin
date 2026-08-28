@@ -359,17 +359,6 @@ pub struct IGPluginApi {
     pub self_test: Option<unsafe extern "C" fn() -> IGStatus>,
 }
 
-// ---------------------------------------------------------------------------
-// IGNativeAbi
-// ---------------------------------------------------------------------------
-
-/// Version stamp returned by the ABI entry point (`ig_plugin_get_api`).
-#[repr(C)]
-#[derive(Debug, Clone, Copy)]
-pub struct IGNativeAbi {
-    pub ig_plugin_abi_version: i32,
-}
-
 // ===========================================================================
 // Helper functions
 // ===========================================================================
